@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#fff9f4">
+<meta name="description" content="点点乐：30 秒一局的安卓休闲小游戏，点中彩色圆球 +1 分，点空不扣分，结算看最高分。">
+<title>我不信有人能点100下！ | 点点乐</title>
+<style>
+  :root {
+    --bg: #fff9f4;
+    --ink: #17122b;
+    --muted: #6a6280;
+    --line: rgba(23, 18, 43, 0.09);
+    --pink: #ff4d8d;
+    --orange: #ff8a3d;
+    --violet: #7a5cff;
+    --mint: #16c79a;
+    --card: #ffffff;
+    --radius: 22px;
+    --shadow: 0 18px 40px -24px rgba(58, 20, 90, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    padding: 0 18px 56px;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+                 "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---------- 背景光斑（纯 CSS 装饰） ---------- */
+  .orbs {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(58px);
+    opacity: 0.55;
+    will-change: transform;
+  }
+  .orb-a {
+    width: 320px; height: 320px;
+    left: -110px; top: -80px;
+    background: radial-gradient(circle at 30% 30%, #ffd166, #ff8a3d 70%);
+    animation: drift-a 16s ease-in-out infinite;
+  }
+  .orb-b {
+    width: 280px; height: 280px;
+    right: -100px; top: 140px;
+    background: radial-gradient(circle at 40% 40%, #ff9ec7, #ff4d8d 70%);
+    animation: drift-b 19s ease-in-out infinite;
+  }
+  .orb-c {
+    width: 300px; height: 300px;
+    left: 30%; bottom: -160px;
+    background: radial-gradient(circle at 50% 50%, #b9a6ff, #7a5cff 70%);
+    animation: drift-c 22s ease-in-out infinite;
+  }
+  @keyframes drift-a {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(40px, 30px, 0) scale(1.1); }
+  }
+  @keyframes drift-b {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(-36px, 26px, 0) scale(1.08); }
+  }
+  @keyframes drift-c {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(24px, -30px, 0) scale(1.12); }
+  }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  /* ---------- 主视觉 ---------- */
+  .hero {
+    padding: 54px 4px 8px;
+    text-align: center;
+    animation: rise 0.7s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 18px;
+    padding: 7px 15px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #8a3b00;
+    background: linear-gradient(120deg, #fff0c9, #ffd9b0);
+    border: 1px solid rgba(255, 138, 61, 0.35);
+    border-radius: 999px;
+  }
+  .eyebrow .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--orange);
+    animation: blink 1.4s ease-in-out infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.8); }
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(30px, 8.4vw, 54px);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    font-weight: 800;
+    text-wrap: balance;
+    color: #f5286f;
+    text-shadow: 0 10px 26px rgba(255, 61, 127, 0.16);
+  }
+  @supports ((-webkit-background-clip: text) and (-webkit-text-fill-color: transparent)) {
+    h1 {
+      background-image: linear-gradient(100deg, #ff3d7f 0%, #ff8a3d 42%, #7a5cff 92%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: none;
+    }
+  }
+
+  .brand {
+    margin: 16px 0 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    color: var(--ink);
+  }
+  .brand span {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-left: 6px;
+  }
+
+  .lead {
+    margin: 10px auto 0;
+    max-width: 30em;
+    font-size: clamp(15px, 4vw, 18px);
+    color: #3b3352;
+    font-weight: 600;
+  }
+  .lead strong {
+    color: var(--pink);
+  }
+
+  .sub {
+    margin: 10px auto 0;
+    max-width: 34em;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  /* ---------- 按钮 ---------- */
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin: 28px 0 0;
+  }
+
+  .btn {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 58px;
+    padding: 10px 30px;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.25;
+    text-decoration: none;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+    font-family: inherit;
+  }
+  .btn small {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    opacity: 0.85;
+    margin-top: 2px;
+  }
+  .btn-primary {
+    color: #fff;
+    background: linear-gradient(135deg, #ff6a3d, #ff3d7f);
+    box-shadow: 0 16px 32px -14px rgba(255, 61, 127, 0.85);
+  }
+  .btn-primary::after {
+    content: "";
+    position: absolute;
+    top: 0; left: -60%;
+    width: 45%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    transform: skewX(-18deg);
+    animation: shine 3.4s ease-in-out 0.8s infinite;
+  }
+  @keyframes shine {
+    0% { left: -60%; }
+    55%, 100% { left: 130%; }
+  }
+  .btn-ghost {
+    color: var(--ink);
+    background: #fff;
+    border: 1.5px solid var(--line);
+    box-shadow: 0 10px 24px -20px rgba(58, 20, 90, 0.6);
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary:hover { box-shadow: 0 22px 38px -16px rgba(255, 61, 127, 0.9); }
+  .btn:active { transform: translateY(1px) scale(0.985); }
+
+  .meta {
+    margin: 16px 0 0;
+    font-size: 12.5px;
+    color: #8a819c;
+    letter-spacing: 0.02em;
+  }
+
+  /* 点击波纹（JS 插入 span，动画由 CSS 完成） */
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    background: rgba(255, 255, 255, 0.65);
+    transform: translate(-50%, -50%) scale(0);
+    animation: ripple-out 620ms ease-out forwards;
+  }
+  @keyframes ripple-out {
+    to { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+  }
+
+  /* ---------- 卡片 ---------- */
+  .card {
+    position: relative;
+    margin: 22px 0 0;
+    padding: 24px 22px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  .card h2 {
+    margin: 0 0 4px;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .card .hint {
+    margin: 0 0 16px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ---------- 手速热身 ---------- */
+  .stage {
+    position: relative;
+    height: 268px;
+    margin: 6px 0 0;
+    border-radius: 18px;
+    background:
+      radial-gradient(circle at 20% 18%, #fff2d6 0%, transparent 55%),
+      radial-gradient(circle at 82% 76%, #e9e2ff 0%, transparent 58%),
+      #fbf8ff;
+    border: 1px dashed rgba(122, 92, 255, 0.3);
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+
+  .ball {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 78px;
+    height: 78px;
+    margin: -39px 0 0 -39px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    background:
+      radial-gradient(circle at 32% 28%, #fffbe6 0%, #ffd93d 42%, #f7951a 100%);
+    box-shadow:
+      0 0 0 6px rgba(255, 217, 61, 0.28),
+      0 14px 26px -10px rgba(247, 149, 26, 0.75);
+    transition: left 0.16s cubic-bezier(0.3, 1.4, 0.5, 1),
+                top 0.16s cubic-bezier(0.3, 1.4, 0.5, 1),
+                transform 0.1s ease;
+    animation: bob 1.8s ease-in-out infinite;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ball::before {
+    content: "";
+    position: absolute;
+    left: 22%; top: 18%;
+    width: 26%; height: 26%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.85);
+    filter: blur(1px);
+  }
+  .ball::after {
+    content: "";
+    position: absolute;
+    inset: 26%;
+    border-radius: 50%;
+    border: 2.5px solid rgba(255, 255, 255, 0.9);
+  }
+  .ball:active { transform: scale(0.92); }
+  @keyframes bob {
+    0%, 100% { margin-top: -39px; }
+    50% { margin-top: -45px; }
+  }
+
+  .stage-mask {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    text-align: center;
+    background: rgba(251, 248, 255, 0.82);
+    backdrop-filter: blur(3px);
+    transition: opacity 0.25s ease, visibility 0.25s;
+  }
+  .stage-mask.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .stage-mask p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+
+  .hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .hud .num {
+    font-size: 22px;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .hud .num.bump { animation: bump 0.22s ease; }
+  @keyframes bump {
+    0% { transform: scale(1); }
+    45% { transform: scale(1.28); color: var(--pink); }
+    100% { transform: scale(1); }
+  }
+  .timer {
+    font-variant-numeric: tabular-nums;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: #f2eeff;
+    color: var(--violet);
+  }
+  .timer.low { background: #ffe7ec; color: var(--pink); }
+
+  .result {
+    margin: 14px 0 0;
+    padding: 12px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    background: #f6f2ff;
+    color: #3b3352;
+  }
+  .result.hero-result {
+    background: linear-gradient(120deg, #fff3d6, #ffe0ec);
+    color: #8a3b00;
+  }
+
+  /* ---------- 玩法列表 ---------- */
+  .steps {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+  .steps li {
+    display: grid;
+    grid-template-columns: 42px 1fr;
+    gap: 12px;
+    align-items: start;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: #fbf9ff;
+    border: 1px solid rgba(122, 92, 255, 0.12);
+  }
+  .steps .icon {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    font-size: 20px;
+    line-height: 1;
+    background: #fff;
+    box-shadow: 0 8px 18px -12px rgba(58, 20, 90, 0.7);
+  }
+  .steps b {
+    display: block;
+    font-size: 15px;
+    margin-bottom: 2px;
+  }
+  .steps p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  /* ---------- 规格表 ---------- */
+  .specs {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 0;
+    font-size: 14px;
+  }
+  .specs th, .specs td {
+    text-align: left;
+    padding: 11px 4px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .specs th {
+    width: 38%;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .specs tr:last-child th, .specs tr:last-child td { border-bottom: 0; }
+
+  /* ---------- 下载区 ---------- */
+  .download {
+    text-align: center;
+    background:
+      radial-gradient(circle at 82% 12%, rgba(255, 217, 61, 0.28), transparent 52%),
+      radial-gradient(circle at 12% 88%, rgba(122, 92, 255, 0.18), transparent 55%),
+      #ffffff;
+  }
+  .download .file {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 18px;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: #4b4266;
+    background: #f5f1ff;
+    border-radius: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .download .file b { color: var(--ink); }
+  .install {
+    margin: 22px auto 0;
+    max-width: 40em;
+    text-align: left;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  .install ol {
+    margin: 8px 0 0;
+    padding-left: 20px;
+  }
+  .install li { margin: 6px 0; }
+  .install code {
+    padding: 1px 6px;
+    font-size: 12.5px;
+    border-radius: 6px;
+    background: #f4f0ff;
+    color: #5a48b8;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  footer {
+    margin: 30px auto 0;
+    padding: 0 6px;
+    text-align: center;
+    font-size: 12px;
+    color: #9a92ab;
+    line-height: 1.7;
+  }
+  footer .sep { margin: 0 6px; opacity: 0.5; }
+
+  @media (min-width: 640px) {
+    body { padding: 0 28px 72px; }
+    .hero { padding-top: 76px; }
+    .card { padding: 28px 30px; }
+    .stage { height: 300px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="orbs" aria-hidden="true">
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
+  <div class="orb orb-c"></div>
+</div>
+
+<div class="page">
+
+  <header class="hero">
+    <p class="eyebrow"><span class="dot"></span>Android 休闲小游戏 · 30 秒一局</p>
+    <h1>我不信有人能点100下！</h1>
+    <p class="brand">点点乐<span>TAP FUN</span></p>
+    <p class="lead">不用动脑，只要手快 —— <strong>30 秒点个爽</strong>。</p>
+    <p class="sub">点中彩色圆球 +1 分，点空不扣分。时间一到自动结算，看你这局能不能破自己的最高分。</p>
+
+    <div class="cta">
+      <a class="btn btn-primary" href="点点乐-v1.0.apk" download="点点乐-v1.0.apk">
+        立即下载 APK
+        <small>v1.0 · 93 KB · 免费</small>
+      </a>
+      <a class="btn btn-ghost" href="#how">先看玩法</a>
+    </div>
+
+    <p class="meta">Android 5.0 及以上<span class="sep">·</span>无需注册<span class="sep">·</span>无广告<span class="sep">·</span>完全离线</p>
+  </header>
+
+  <section class="card" aria-labelledby="warmup-title">
+    <h2 id="warmup-title">手速热身</h2>
+    <p class="hint">网页版迷你挑战：30 秒内点中圆球，先感受一下节奏（正式版手感更好）。</p>
+
+    <div class="hud">
+      <span>得分 <span class="num" id="hudScore">0</span></span>
+      <span>最高 <span class="num" id="hudBest">0</span></span>
+      <span class="timer" id="hudTimer">30s</span>
+    </div>
+
+    <div class="stage" id="stage">
+      <button class="ball" id="ball" type="button" aria-label="点击圆球得分"></button>
+      <div class="stage-mask" id="mask">
+        <button class="btn btn-primary" id="startBtn" type="button" style="min-width:180px">开始 30 秒挑战</button>
+        <p>点中移动的圆球累计得分，结束看结果</p>
+      </div>
+    </div>
+
+    <p class="result" id="result" hidden></p>
+  </section>
+
+  <section class="card" id="how" aria-labelledby="how-title">
+    <h2 id="how-title">怎么玩</h2>
+    <p class="hint">零学习成本，打开就上手。</p>
+    <ul class="steps">
+      <li>
+        <span class="icon" aria-hidden="true">⏱</span>
+        <div>
+          <b>30 秒一局</b>
+          <p>打开应用立刻开始，顶部进度条走完自动结算，不用点开始、不用选关卡。</p>
+        </div>
+      </li>
+      <li>
+        <span class="icon" aria-hidden="true">🎯</span>
+        <div>
+          <b>点中彩色圆球 +1 分</b>
+          <p>圆球会持续缓慢漂移，命中后立刻换位置、换颜色，越点越上瘾。</p>
+        </div>
+      </li>
+      <li>
+        <span class="icon" aria-hidden="true">🙅</span>
+        <div>
+          <b>点空不扣分</b>
+          <p>点到空白只有一个小提示，没有任何惩罚，可以放开手速乱点解压。</p>
+        </div>
+      </li>
+      <li>
+        <span class="icon" aria-hidden="true">🏆</span>
+        <div>
+          <b>结算看得分与历史最高分</b>
+          <p>时间到显示本轮得分和最高纪录，破纪录会亮出金色「新纪录！」，最高分本地保存。</p>
+        </div>
+      </li>
+      <li>
+        <span class="icon" aria-hidden="true">🔄</span>
+        <div>
+          <b>一键重玩</b>
+          <p>结算页点屏幕任意位置（或「再来一局」按钮）立刻重开，连玩几十局都不用退出。</p>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <section class="card" aria-labelledby="spec-title">
+    <h2 id="spec-title">系统要求</h2>
+    <p class="hint">一台普通安卓手机就够了。</p>
+    <table class="specs">
+      <tbody>
+        <tr><th>应用名称</th><td>点点乐（Tap Fun）</td></tr>
+        <tr><th>系统版本</th><td>Android 5.0 及以上</td></tr>
+        <tr><th>安装包大小</th><td>约 93 KB（95,017 字节）</td></tr>
+        <tr><th>版本</th><td>v1.0</td></tr>
+        <tr><th>屏幕方向</th><td>竖屏</td></tr>
+        <tr><th>权限</th><td>不申请任何敏感权限</td></tr>
+        <tr><th>网络</th><td>完全离线，无需联网</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card download" aria-labelledby="dl-title">
+    <h2 id="dl-title">下载安装</h2>
+    <p class="hint">安卓手机直接安装，约 93 KB。</p>
+    <p class="file">📦 <b>点点乐-v1.0.apk</b> · 95,017 字节 · v1.0</p>
+
+    <div class="cta" style="margin-top:0">
+      <a class="btn btn-primary" href="点点乐-v1.0.apk" download="点点乐-v1.0.apk">
+        下载点点乐 APK
+        <small>Android 5.0+ · 免安装费</small>
+      </a>
+    </div>
+
+    <div class="install">
+      <p style="margin:14px 0 0"><b style="color:#17122b">手机扫码 / 传输安装</b></p>
+      <ol>
+        <li>把本页面同目录下的 <code>点点乐-v1.0.apk</code> 传到手机：数据线拷贝、微信「文件传输助手」、QQ、网盘或 AirDrop 到手机均可。</li>
+        <li>在手机文件管理里点击该 APK；若系统提示「未知来源应用」/「不允许安装未知应用」，按提示允许当前文件管理器安装即可。</li>
+        <li>安装完成后桌面出现「点点乐」图标，点开就玩，无需登录、无需联网。</li>
+      </ol>
+      <p style="margin:12px 0 0;color:#9a92ab;font-size:12.5px">提示：如果是在手机浏览器里打开本页面，且 APK 与页面放在同一目录，直接点上方按钮即可下载安装。</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>点点乐 v1.0 · 一个 30 秒就能玩一局的安卓小游戏</p>
+    <p>纯本地页面<span class="sep">·</span>无外部依赖<span class="sep">·</span>双击即可打开</p>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- 通用点击波纹 ---------- */
+  function bindRipple(el) {
+    if (!el) return;
+    el.addEventListener("pointerdown", function (ev) {
+      var box = el.getBoundingClientRect();
+      var size = Math.max(box.width, box.height) * 1.6;
+      var span = document.createElement("span");
+      span.className = "ripple";
+      span.style.width = size + "px";
+      span.style.height = size + "px";
+      span.style.left = (ev.clientX - box.left) + "px";
+      span.style.top = (ev.clientY - box.top) + "px";
+      if (el.classList.contains("ball")) {
+        span.style.background = "rgba(255,255,255,0.9)";
+      }
+      el.appendChild(span);
+      setTimeout(function () {
+        if (span.parentNode) span.parentNode.removeChild(span);
+      }, 640);
+    });
+  }
+
+  var rippleTargets = document.querySelectorAll(".btn, .ball");
+  for (var i = 0; i < rippleTargets.length; i++) bindRipple(rippleTargets[i]);
+
+  /* ---------- 迷你挑战 ---------- */
+  var stage = document.getElementById("stage");
+  var ball = document.getElementById("ball");
+  var mask = document.getElementById("mask");
+  var startBtn = document.getElementById("startBtn");
+  var scoreEl = document.getElementById("hudScore");
+  var bestEl = document.getElementById("hudBest");
+  var timerEl = document.getElementById("hudTimer");
+  var resultEl = document.getElementById("result");
+
+  var ROUND = 30;
+  var playing = false;
+  var score = 0;
+  var left = ROUND;
+  var tickTimer = null;
+  var best = 0;
+
+  try {
+    best = parseInt(window.localStorage.getItem("tapfun_web_best") || "0", 10) || 0;
+  } catch (e) {
+    best = 0;
+  }
+  bestEl.textContent = best;
+
+  function placeBall() {
+    var pad = 10;
+    var bw = ball.offsetWidth || 78;
+    var bh = ball.offsetHeight || 78;
+    var maxX = Math.max(0, stage.clientWidth - bw - pad * 2);
+    var maxY = Math.max(0, stage.clientHeight - bh - pad * 2);
+    var x = pad + Math.random() * maxX;
+    var y = pad + Math.random() * maxY;
+    ball.style.left = (x + bw / 2) + "px";
+    ball.style.top = (y + bh / 2) + "px";
+  }
+
+  function bump(el) {
+    el.classList.remove("bump");
+    void el.offsetWidth;
+    el.classList.add("bump");
+  }
+
+  function setTimerText() {
+    timerEl.textContent = left + "s";
+    if (left <= 8) {
+      timerEl.classList.add("low");
+    } else {
+      timerEl.classList.remove("low");
+    }
+  }
+
+  function endGame() {
+    playing = false;
+    if (tickTimer) {
+      clearInterval(tickTimer);
+      tickTimer = null;
+    }
+    timerEl.textContent = "0s";
+    resultEl.hidden = false;
+    var isNew = score > best;
+    if (isNew) {
+      best = score;
+      bestEl.textContent = best;
+      try {
+        window.localStorage.setItem("tapfun_web_best", String(best));
+      } catch (e) { /* 隐私模式下忽略 */ }
+    }
+    if (score >= 100) {
+      resultEl.className = "result hero-result";
+      resultEl.textContent = "时间到：共点中 " + score + " 下 🎉 你居然真的点到 100 了，手机版继续冲！";
+    } else if (isNew && score > 0) {
+      resultEl.className = "result hero-result";
+      resultEl.textContent = "时间到：共点中 " + score + " 下，新纪录！再来一局试试能不能上 100。";
+    } else {
+      resultEl.className = "result";
+      resultEl.textContent = "时间到：共点中 " + score + " 下，最高纪录 " + best + " 下。";
+    }
+    mask.classList.remove("hidden");
+    startBtn.textContent = "再来一局";
+  }
+
+  function startGame() {
+    score = 0;
+    left = ROUND;
+    playing = true;
+    scoreEl.textContent = "0";
+    resultEl.hidden = true;
+    mask.classList.add("hidden");
+    setTimerText();
+    placeBall();
+    if (tickTimer) clearInterval(tickTimer);
+    tickTimer = setInterval(function () {
+      left--;
+      if (left <= 0) {
+        left = 0;
+        setTimerText();
+        endGame();
+      } else {
+        setTimerText();
+      }
+    }, 1000);
+  }
+
+  startBtn.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+    startGame();
+  });
+
+  ball.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+    if (!playing) return;
+    score++;
+    scoreEl.textContent = score;
+    bump(scoreEl);
+    placeBall();
+  });
+
+  stage.addEventListener("click", function () {
+    if (!playing) return;
+    resultEl.hidden = false;
+    resultEl.className = "result";
+    resultEl.textContent = "点空不扣分，继续追球。";
+    setTimeout(function () {
+      if (playing) resultEl.hidden = true;
+    }, 900);
+  });
+
+  window.addEventListener("resize", function () {
+    if (playing) placeBall();
+  });
+})();
+</script>
+
+</body>
+</html>
